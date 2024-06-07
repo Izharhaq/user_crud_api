@@ -6,7 +6,7 @@ from rest_framework import status
 from .models import User
 from .serializers import UserSerializer
 
-@api_view(['POST'])
+@api_view(['POST']) # Need to work on GET method here
 def find_users(request):
     users = User.objects.filter(
         firstName=request.data['firstName'], 
@@ -31,8 +31,11 @@ def save_users(request):
     user.email = request.data['email']
     user.phone = request.data['phone']
     user.save()
-
+# Need to add here serializers
     return Response(status=status.HTTP_201_CREATED)
+
+
+# Need to add request method for Delete operation
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
