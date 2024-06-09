@@ -1,43 +1,61 @@
-from django.shortcuts import render
-from rest_framework import viewsets
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
 from rest_framework import status
-from .models import User
-from .serializers import UserSerializer
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework import viewsets
+from users.models import User
+from users.serializers import UserSerializer
 
-@api_view(['POST']) # Need to work on GET method here
-def find_users(request):
-    users = User.objects.filter(
-        firstName=request.data['firstName'], 
-        lastName=request.data['lastName'], 
-        phone=request.data['phone'], 
-        dateOfBirth=request.data['dateOfBirth']
-    )
-    serializer = UserSerializer(users, many=True)
-    return Response(serializer.data)
+class UserList(APIView):
+    def get(self, request):
+        users = User.objects.all()
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data)
 
-@api_view(['POST'])
-def save_users(request):
-    try:
-        user = User.objects.get(id=request.data['userId'])
-    except User.DoesNotExist:
-        user = User()
+class UserCreate(APIView):
+    def post(self, request):
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    user.firstName = request.data['firstName']
-    user.lastName = request.data['lastName']
-    user.middleName = request.data['middleName']
-    user.dateOfBirth = request.data['dateOfBirth']
-    user.email = request.data['email']
-    user.phone = request.data['phone']
-    user.save()
-# Need to add here serializers
-    return Response(status=status.HTTP_201_CREATED)
+class UserUpdate(APIView):
+    def put(self, request, pk):
+        user = get_object_or_404(User, pk=pk)
+        serializer = UserSerializer(user, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class UserDelete(APIView):
+    def delete(self, request, pk):
+        user = get_object_or_404(User, pk=pk)
+        user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
-# Need to add request method for Delete operation
+class UserFind(APIView):
+    def get(self, request):
+        first_name = request.query_params.get('firstName', None)
+        last_name = request.query_params.get('lastName', None)
+        phone = request.query_params.get('phone', None)
+        date_of_birth = request.query_params.get('dateOfBirth', None)
+
+        filters = {}
+        if first_name:
+            filters['first_name'] = first_name
+        if last_name:
+            filters['last_name'] = last_name
+        if phone:
+            filters['phone'] = phone
+        if date_of_birth:
+            filters['date_of_birth'] = date_of_birth
+
+        users = User.objects.filter(**filters)
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data)
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-
